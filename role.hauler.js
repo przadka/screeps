@@ -14,12 +14,6 @@
  *      collecting phase (so that the hauler doesn't flick
  *      between different containers when collecting payload.)
  * 
- * When a hauler is in collecting state we also want to assign a container to it so that it can collect energy from a specific container
-This assignment is performed when hauler starts collecting
-During collection it may happen that the assigned container is lost. In that case we need to assign a new container
-
-So if get object by Id returns null we need to find a new assignment and store it in memory 
-
  */
 var roleHauler = {
 
