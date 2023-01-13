@@ -4,7 +4,7 @@ var roleBuilder = require('role.builder');
 var roleRepairer = require('role.repairer');
 var roleMiner = require('role.miner');
 var roleHauler = require('role.hauler');
-const { min } = require('lodash');
+var roleLinker = require('role.linker');
 
 module.exports.loop = function () {
     Game.cpu.generatePixel()
@@ -23,20 +23,20 @@ module.exports.loop = function () {
     var miners = _.filter(Game.creeps, (creep) => creep.memory.role == 'miner');
     var haulers = _.filter(Game.creeps, (creep) => creep.memory.role == 'hauler');
     var harvesters = _.filter(Game.creeps, (creep) => creep.memory.role == 'harvester');
+    var linkers = _.filter(Game.creeps, (creep) => creep.memory.role == 'linker');
 
     console.log("U:"+upgraders.length+",B:"+builders.length+
-    ",R:"+repairers.length+",M:"+miners.length+",HAU:"+haulers.length+",HAR:"+harvesters.length);
+    ",R:"+repairers.length+",M:"+miners.length+
+    ",HAU:"+haulers.length+
+    ",HAR:"+harvesters.length+
+    ",L:"+linkers.length);
 
- /*   var towers = Game.ro .room.find(FIND_STRUCTURES, { 
-        filter: (structure) => { 
-            return ((structure.structureType == STRUCTURE_TOWER))
-        }
-     });
-*/
-    if(haulers.length < 2) {
+
+    if(haulers.length < 1) {
         var newName = 'Hauler' + Game.time;
-        Game.spawns['Spawn1'].spawnCreep([CARRY, CARRY, CARRY, CARRY, MOVE, MOVE], newName, 
-            {memory: {role: 'hauler', assignment: 0}});        
+        Game.spawns['Spawn1'].spawnCreep([CARRY, CARRY, CARRY, CARRY, CARRY, CARRY, 
+               CARRY,CARRY, CARRY,CARRY,MOVE, MOVE, MOVE, MOVE, MOVE, MOVE], newName, 
+            {memory: {role: 'hauler', transporting: false, assignment: 0}});        
     }
 
     
@@ -59,7 +59,7 @@ module.exports.loop = function () {
             {memory: {role: 'builder'}});        
     }
 
-    if(repairers.length < 1) {
+    if(repairers.length < 2) {
         var newName = 'Repairer' + Game.time;
         Game.spawns['Spawn1'].spawnCreep([WORK,CARRY,MOVE, MOVE], newName, 
             {memory: {role: 'repairer'}});        
@@ -68,9 +68,15 @@ module.exports.loop = function () {
 
     if(miners.length < 2) {
         var newName = 'Miner' + Game.time;
-        console.log('Spawning new miner: ' + newName);
         Game.spawns['Spawn1'].spawnCreep([WORK,WORK,WORK, CARRY, MOVE], newName, 
             {memory: {role: 'miner', assignment: 0, fixedContainerTime: 0}});        
+    }
+
+    if(linkers.length < 1) {
+        var newName = 'Linker' + Game.time;
+        console.log('Spawning new linker: ' + newName);
+        Game.spawns['Spawn1'].spawnCreep([WORK,WORK,WORK, CARRY, CARRY, CARRY, MOVE, MOVE], newName, 
+            {memory: {role: 'linker', assignment: 0}});        
     }
 
 
@@ -82,7 +88,7 @@ module.exports.loop = function () {
     if(closestHostile) {
             tower.attack(closestHostile);
     }
-
+/*
     if(tower) {
         var closestDamagedStructure = tower.pos.findClosestByRange(FIND_STRUCTURES, {
             filter: (structure) => structure.hits < structure.hitsMax
@@ -93,7 +99,7 @@ module.exports.loop = function () {
 
 
     }
-
+*/
     for(var name in Game.creeps) {
         var creep = Game.creeps[name];
         
@@ -115,10 +121,8 @@ module.exports.loop = function () {
         if(creep.memory.role == 'hauler') {
             roleHauler.run(creep);
         }
+        if(creep.memory.role == 'linker') {
+            roleLinker.run(creep);
+        }
     }
-/*
-    for (var t in towers) {
-        var tower = towers[t];
-        console.log(tower);
-    }*/
 }
