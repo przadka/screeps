@@ -22,11 +22,11 @@ var roleHauler = {
 
         //state change code - decide whether 
         //the current state should be changed
-        
+
         if (!creep.memory.transporting) { //collecting state
             var my_container = Game.getObjectById(creep.memory.assignment);
 
-            if (my_container===null) {
+            if (my_container === null) {
                 //i don't have assignment
                 //either I just spawned or I lost my container
                 creep.memory.assignment = this.findContainer(creep).id;
@@ -38,7 +38,7 @@ var roleHauler = {
             //if full - start transporting
             if (creep.store.getFreeCapacity() == 0) {
                 creep.say('⚡transport');
-                creep.memory.assignment =0;
+                creep.memory.assignment = 0;
                 creep.memory.transporting = true;
             }
         } else { //transporting state
@@ -49,7 +49,7 @@ var roleHauler = {
                 creep.memory.transporting = false;
                 creep.memory.assignment = this.findContainer(creep).id;
                 //TODO what if there is no container??? return null?
-            } 
+            }
         }
 
 
@@ -68,24 +68,32 @@ var roleHauler = {
                 }
             });
 
-            //sort by distancestructure.pos.getRangeTo by
-            //sort targets by capacity
-            //but i need a stable sort algorithm
-            //hauler will try to fill in smaller targets first
-            //TODO it would be good to sort by distance first
+
+            //sort by capacity, trying to fill 
+            //in smaller targets first
 
             targets = targets.sort((a, b) =>
                 (a.store.getCapacity() - b.store.getCapacity()));
 
+
             if (targets.length > 0) {
-                if (creep.transfer(targets[0], RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
-                    creep.moveTo(targets[0], { visualizePathStyle: { stroke: '#ffffff' } });
+                //from all targets with lowest capacity 
+                //get the closest one
+
+                var best_targets = _.filter(targets, (t) => t.store.getCapacity() == targets[0].store.getCapacity());
+                var next_target = creep.pos.findClosestByPath(best_targets);;
+
+                if (creep.transfer(next_target, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
+                    creep.moveTo(next_target, { visualizePathStyle: { stroke: '#ffffff' } });
                 }
             }
         } else {
             //collecting payload from assigned container
-            
+
             var my_container = Game.getObjectById(creep.memory.assignment);
+            //TODO see if there is any energy that was dropped
+            // var dropeed = creep.room.find(FIND_DROPPED_RESOURCES, RESOURCE_ENERGY);
+
             if (creep.withdraw(my_container, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
                 creep.moveTo(my_container, { visualizePathStyle: { stroke: '#ffaa00' } });
             }
