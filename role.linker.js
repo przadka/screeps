@@ -1,8 +1,10 @@
-//Linker is a creep working with links
-//It assigns itself to a link and either supplies energy to it
-//When it notices that the link is full, it sends the energy to 
-// the target link
-
+/**
+ * Linker is a creep working with links. It assigns iself to a (sending) link
+ * and keeps supplying energy to it. Any sending link should have one linker
+ * working on it. When linker notices that the link is full, it sends
+ * the energy to the target link.
+ * 
+ */
 var roleLinker = {
 
     /** @param {Creep} creep **/
@@ -63,7 +65,7 @@ var roleLinker = {
                     }
                 }
                 if (my_link.energy == my_link.energyCapacity) {
-                    console.log(my_link.transferEnergy(target));    
+                    my_link.transferEnergy(target);    
                 }
 
                 
