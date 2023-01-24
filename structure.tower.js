@@ -3,7 +3,7 @@
  * 
  */
 
-var tower = {
+var towerStructure = {
 
     /** @param {Structure} tower **/
     run: function (tower) {
@@ -14,23 +14,26 @@ var tower = {
             tower.attack(closestHostile);
         }
 
-            /*
+            
 
-            var closestDamagedStructure = tower.pos.findClosestByRange(FIND_STRUCTURES, 0{
-                filter: (structure) => structure.hits < structure.hitsMax
-            });
-            if(closestDamagedStructure) {
+            var closestDamagedStructure = tower.pos.findClosestByRange(FIND_STRUCTURES, {
+                    filter: (structure) => {
+                        return ((structure.hits < structure.hitsMax) && (structure.hits > 0) &&
+                            structure.structureType == STRUCTURE_ROAD)
+                    }
+                });
+
+
+            //only if energy is above>xx
+            if(closestDamagedStructure && (tower.store.getUsedCapacity(RESOURCE_ENERGY)/tower.store.getCapacity(RESOURCE_ENERGY)>0.5)) {
                 tower.repair(closestDamagedStructure);
             }
     
     
-        }
-    */
-
 
     }
 };
 
 
 
-module.exports = tower;
+module.exports = towerStructure;
