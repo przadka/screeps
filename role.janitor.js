@@ -1,14 +1,14 @@
-//build or repair stuff
-
-//if there is stuff to build, try to do that first
-//otherwise - repair
-
-//TODO should fix containers as well?
-//store information about last seen healthy tick 
-//for structure id - in a dictionary
-//only repair if hasnt been repaired for a while
-
-
+/**
+ * Build or repair stuff. If something to be build
+ * janitor will do that first. Structures maintained:
+ * containers, walls, ramparts. Each structure has a target
+ * healthy state and a cooldown time which needs to 
+ * pass before janitor starts working on it again. At the 
+ * moment cooldowns don't really work because lifespan of a 
+ * single janitor is shorter than cooldown time. This should
+ * be stored as a global state at shared across all janitors.
+ * 
+ */
 
 var roleJanitor = {
 
@@ -49,30 +49,7 @@ var roleJanitor = {
                             )
                     }
                 });
-/*
-                var r_containers = creep.room.find(FIND_STRUCTURES, {
-                    filter: (structure) => {
-                        return ((structure.hits > 0) &&
-                            structure.structureType == STRUCTURE_CONTAINER)
-                    }
-                });
 
-
-                var r_walls = creep.room.find(FIND_STRUCTURES, {
-                    filter: (structure) => {
-                        return ((structure.hits < 500000) && (structure.hits > 0) &&
-                            structure.structureType == STRUCTURE_WALL)
-                    }
-                });
-
-
-                var r_ramparts = creep.room.find(FIND_STRUCTURES, {
-                    filter: (structure) => {
-                        return ((structure.hits < 6000000) && (structure.hits > 0) &&
-                            structure.structureType == STRUCTURE_RAMPART)
-                    }
-                });
- */             //ramparty posortowac po tych najbardziej uszkodzonych
 
                 repairs = _.filter(repairs, (repair) => 
                                 (Game.time-getFixedTimeFor(creep, repair)) > REPAIR_COOLDOWN[repair.structureType]);
@@ -84,14 +61,13 @@ var roleJanitor = {
                     } else {
                         //successfully repaired - check if finished repairing
                         //and possibly store repariedTick for this structure
-
                         if (repair.hits>HEALTHY_STATES[repair.structureType]) {
                             creep.memory.fixedTimes[repair.id] =  Game.time;
                         }
                     }
                 } else {
                     //nothing to repair, where should i move?
-                    console.log("Janitor: nothing to build or repair");
+                    //console.log("Janitor: nothing to build or repair");
                 }
             }
         }
@@ -120,13 +96,13 @@ module.exports = roleJanitor;
 
 const HEALTHY_STATES = {
     [STRUCTURE_CONTAINER]: 200000,
-    [STRUCTURE_RAMPART]: 1000000,
+    [STRUCTURE_RAMPART]: 5000000,
     [STRUCTURE_ROAD]: 5000
 }
 
 const REPAIR_COOLDOWN = {
-    [STRUCTURE_CONTAINER]: 10000,
-    [STRUCTURE_RAMPART]: 5000,
+    [STRUCTURE_CONTAINER]: 20000,
+    [STRUCTURE_RAMPART]: 10000,
     [STRUCTURE_ROAD]: 10000
 }
 
