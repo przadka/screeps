@@ -1,3 +1,9 @@
+/**
+ * Upgrader takes care of upgrading the controller in the room.
+ * It picks the energy from available source/storage and bring
+ * it to the room controller upgrading it.
+ */
+
 var roleUpgrader = {
 
     /** @param {Creep} creep **/
@@ -19,23 +25,6 @@ var roleUpgrader = {
         }
         else {
 
-            //i should also use link
-            /*
-            var sources = creep.room.find(FIND_STRUCTURES, { 
-                filter: (structure) => { 
-                    return (((structure.structureType == STRUCTURE_STORAGE)
-                    || (structure.structureType == STRUCTURE_CONTAINER))  && 
-                    structure.store[RESOURCE_ENERGY] > 0)
-                }
-             });
-             */
-
-            //decide dynamically what source of energy to use
-            //if storage or links exists - pick these randomly
-            //and ignore containers
-            //if only containers exist - use them
-            //worst case - go to source directly
-
             var s_storage = creep.room.find(FIND_STRUCTURES, {
                 filter: (structure) => {
                     return ((structure.structureType == STRUCTURE_STORAGE) &&
@@ -43,14 +32,7 @@ var roleUpgrader = {
                 }
             });
 
-            var s_containers = creep.room.find(FIND_STRUCTURES, {
-                filter: (structure) => {
-                    return ((structure.structureType == STRUCTURE_CONTAINER) &&
-                        structure.store[RESOURCE_ENERGY] > 0)
-                }
-            });
-
-            var s_link = creep.room.find(FIND_STRUCTURES, {
+            var s_links = creep.room.find(FIND_STRUCTURES, {
                 filter: (structure) => {
                     return ((structure.structureType == STRUCTURE_LINK) &&
                         structure.store[RESOURCE_ENERGY] > 0 &&
@@ -62,16 +44,20 @@ var roleUpgrader = {
                 }
             });
 
+            var my_source = null;
 
-            //TODO i should dynamically decide which source to use
-            //only use links if storeage and containers are not there
-            //TODO i should use links or containers here?
-            var source = creep.pos.findClosestByPath(_.merge(s_storage, s_link));
-
-            //find fullest source and use it?
-
-            if (creep.withdraw(source, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
-                creep.moveTo(source, { visualizePathStyle: { stroke: '#ffaa00' } });
+            if (_.size(s_storage) > 0 || _.size(s_links) > 0) {
+                //storage or links 
+                my_source = creep.pos.findClosestByPath(_.merge(s_storage, s_links));
+                if (creep.withdraw(my_source, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
+                    creep.moveTo(my_source, { visualizePathStyle: { stroke: '#ffaa00' } });
+                }
+            } else {
+                //otherwise just harvest energy sources directly
+                my_source = creep.pos.findClosestByPath(creep.room.find(FIND_SOURCES));
+                if (creep.harvest(my_source, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
+                    creep.moveTo(my_source, { visualizePathStyle: { stroke: '#ffaa00' } });
+                }
             }
         }
     }
