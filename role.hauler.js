@@ -50,10 +50,10 @@ var roleHauler = {
                 creep.say('🔄collect');
                 creep.memory.transporting = false;
 
-
                 let shippableMinerals = this.getShippableMinerals(creep.room);
+      
 
-                if (shippableMinerals.length > 0 && isRoomHealthy()) {
+                if (_.size(shippableMinerals) > 0 && this.isRoomHealthy(creep.room)) {
                     //i can collect some mineral
                     //for reach mineral, I have a list of containers that
                     //have this mineral and are almost full
@@ -61,7 +61,8 @@ var roleHauler = {
                     let shipmentMineral = _.get(_.keys(shippableMinerals), 0);
                     let shipmentContainer = _.get(_.values(shippableMinerals), 0)[0].id;
 
-                    creep.memory.assignment = shipmentMineral;
+                    creep.memory.payload = shipmentMineral;
+
                     //creep.memory.assignment = shipmentContainer; 
                     //TODO maybe this is better because I alreayd have this container 
                     //so i dont need to find it laters with find Containers
@@ -146,10 +147,10 @@ var roleHauler = {
 
 
     getShippableMinerals: function (room) {
-        let shippableContainers = [];
+        let shippableContainers = {};
 
         var mineableDeposits =
-            creep.room.find(FIND_MINERALS, {
+            room.find(FIND_MINERALS, {
                 filter: (deposit) => {
                     return (deposit.pos.getRangeTo(deposit.pos.findClosestByRange(FIND_STRUCTURES, {
                         filter: (structure) => {
@@ -159,21 +160,20 @@ var roleHauler = {
                 }
             });
 
-
-        var containers = creep.room.find(FIND_STRUCTURES, {
+        var containers = room.find(FIND_STRUCTURES, {
             filter: (structure) => {
                 return ((structure.structureType == STRUCTURE_CONTAINER))
             }
         });
 
         for (const d of mineableDeposits) {
-
             let shipmentsForMineral = _.filter(containers, (c) =>
                 (c.store.getUsedCapacity(d.mineralType) / c.store.getCapacity(d.mineralType) > 0.9));
 
             if (shipmentsForMineral.length > 0) {
                 shippableContainers[d.mineralType] = shipmentsForMineral;
             }
+
         }
 
         return shippableContainers;
