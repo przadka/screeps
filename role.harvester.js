@@ -47,17 +47,13 @@ var roleHarvester = {
         }
         else {
 
-            //harvesters should really just focus on extension probably
-            //towers maybe
-            //everthing else should be covered by haulers or other creeps
-            //and harvester need to make sure we can respawn these bigger creeps
-            //if we need to
 
             var targets = creep.room.find(FIND_STRUCTURES, {
                 filter: (structure) => {
                     return (structure.structureType == STRUCTURE_EXTENSION ||
                         structure.structureType == STRUCTURE_STORAGE ||
-                        structure.structureType == STRUCTURE_TOWER)
+                        structure.structureType == STRUCTURE_TOWER ||
+                        structure.structureType == STRUCTURE_SPAWN)
                         &&
                         structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0
                 }
@@ -68,8 +64,11 @@ var roleHarvester = {
                     creep.moveTo(targets[0], { visualizePathStyle: { stroke: '#ffffff' } });
                 }
             } else {
-                //move somwhere?
-                creep.say('nothing to do');
+                //stores dont need energy -> upgrade controllers
+                
+                if (creep.upgradeController(creep.room.controller) == ERR_NOT_IN_RANGE) {
+                    creep.moveTo(creep.room.controller);
+                }
 
             }
         }
