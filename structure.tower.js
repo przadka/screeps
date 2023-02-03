@@ -12,24 +12,38 @@ var towerStructure = {
 
         if (closestHostile) {
             tower.attack(closestHostile);
-        }
-
-            
+        } else {
 
             var closestDamagedStructure = tower.pos.findClosestByRange(FIND_STRUCTURES, {
-                    filter: (structure) => {
-                        return ((structure.hits < structure.hitsMax) && (structure.hits > 0) &&
-                            structure.structureType == STRUCTURE_ROAD)
-                    }
-                });
+                filter: (structure) => {
+                    return ((structure.hits < structure.hitsMax) && (structure.hits > 0) &&
+                        (structure.structureType == STRUCTURE_ROAD))
+                }
+            });
 
+            let damaged_roads = tower.room.find(FIND_STRUCTURES, {
+                filter: (structure) => {
+                    return ((structure.hits < structure.hitsMax) && (structure.hits > 0) &&
+                        (structure.structureType == STRUCTURE_ROAD))
+                }
+            });
+
+            let damaged_walls = tower.room.find(FIND_STRUCTURES, {
+                filter: (structure) => {
+                    return ((structure.hits < 200000) && (structure.hits > 0) &&
+                        (structure.structureType == STRUCTURE_WALL))
+                }
+            });
+
+            let closest_damaged = tower.pos.findClosestByRange(_.merge(damaged_roads, damaged_walls));
 
             //only if energy is above>xx
-            if(closestDamagedStructure && (tower.store.getUsedCapacity(RESOURCE_ENERGY)/tower.store.getCapacity(RESOURCE_ENERGY)>0.5)) {
-                tower.repair(closestDamagedStructure);
+            if (closest_damaged && (tower.store.getUsedCapacity(RESOURCE_ENERGY) / tower.store.getCapacity(RESOURCE_ENERGY) > 0.6)) {
+                tower.repair(closest_damaged);
             }
-    
-    
+        }
+
+
 
     }
 };
