@@ -59,13 +59,20 @@ var roleHarvester = {
                 }
             });
 
+            targets = targets.sort((a, b) =>
+                (a.store.getCapacity() - b.store.getCapacity()));
+
             if (targets.length > 0) {
-                if (creep.transfer(targets[0], RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
-                    creep.moveTo(targets[0], { visualizePathStyle: { stroke: '#ffffff' } });
+
+                let best_targets = _.filter(targets, (t) => t.store.getCapacity() == targets[0].store.getCapacity());
+                my_target = creep.pos.findClosestByPath(best_targets);;
+
+                if (creep.transfer(my_target, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
+                    creep.moveTo(my_target, { visualizePathStyle: { stroke: '#ffffff' } });
                 }
             } else {
                 //stores dont need energy -> upgrade controllers
-                
+
                 if (creep.upgradeController(creep.room.controller) == ERR_NOT_IN_RANGE) {
                     creep.moveTo(creep.room.controller);
                 }
