@@ -8,12 +8,33 @@
  * single janitor is shorter than cooldown time. This should
  * be stored as a global state at shared across all janitors.
  * 
+ * Can work in remote room getting it's energy from the base room.
  */
 
 var roleJanitor = {
 
     /** @param {Creep} creep **/
     run: function (creep) {
+
+        //if full and i should be working in another room - exit
+        if ((creep.store.getFreeCapacity() == 0) &&
+            (creep.memory.target != undefined) && (creep.room.name != creep.memory.target)) {
+            //find exit to the target room
+
+            let exit = creep.room.findExitTo(creep.memory.target);
+            creep.moveTo(creep.pos.findClosestByRange(exit));
+            return; //refactor?
+        }
+
+        //if empty and my base is in a differnet room, go to base to fillu up
+        if ((creep.store[RESOURCE_ENERGY] == 0) &&
+            (creep.memory.base != undefined) && (creep.room.name != creep.memory.base)) {
+            //find exit to the base room
+
+            let exit = creep.room.findExitTo(creep.memory.base);
+            creep.moveTo(creep.pos.findClosestByRange(exit));
+            return; //refactor?
+        }
 
 
         //state transitions
@@ -25,6 +46,19 @@ var roleJanitor = {
         if (!creep.memory.working && creep.store.getFreeCapacity() == 0) {
             //i just filled my energy, so i will get to work
             creep.memory.working = true;
+            /*
+            if (creep.memory.base == "E12N15") {
+                if (Math.random() < 0.2) {
+                    //70% probability to move to another room
+                    creep.memory.target = "E12N14"; //TODO refactor
+                } else if (Math.random() < 0.25) {
+                    creep.memory.target = "E12N16"; //TODO refactor
+                } else {
+                    creep.memory.target = "E12N15"; //TODO refactor
+                }
+            }
+            */
+
         }
 
         if (creep.memory.working) {
@@ -42,17 +76,17 @@ var roleJanitor = {
                 var repairs = creep.room.find(FIND_STRUCTURES, {
                     filter: (structure) => {
                         return ((structure.hits < HEALTHY_STATES[structure.structureType])
-                                 && (structure.hits > 0) &&
-                            (structure.structureType == STRUCTURE_WALL 
-                            || structure.structureType == STRUCTURE_CONTAINER
-                            || structure.structureType == STRUCTURE_RAMPART )
-                            )
+                            && (structure.hits > 0) &&
+                            (structure.structureType == STRUCTURE_WALL
+                                || structure.structureType == STRUCTURE_CONTAINER
+                                || structure.structureType == STRUCTURE_RAMPART)
+                        )
                     }
                 });
 
 
-                repairs = _.filter(repairs, (repair) => 
-                                (Game.time-getFixedTimeFor(creep, repair)) > REPAIR_COOLDOWN[repair.structureType]);
+                repairs = _.filter(repairs, (repair) =>
+                    (Game.time - getFixedTimeFor(creep, repair)) > REPAIR_COOLDOWN[repair.structureType]);
 
                 if (repairs.length > 0) {
                     var repair = repairs[0];//creep.pos.findClosestByPath(repairs);//TODO what is better?
@@ -61,33 +95,45 @@ var roleJanitor = {
                     } else {
                         //successfully repaired - check if finished repairing
                         //and possibly store repariedTick for this structure
-                        if (repair.hits>HEALTHY_STATES[repair.structureType]) {
-                            creep.memory.fixedTimes[repair.id] =  Game.time;
+                        if (repair.hits > HEALTHY_STATES[repair.structureType]) {
+                            creep.memory.fixedTimes[repair.id] = Game.time;
                         }
                     }
                 } else {
                     //nothing to repair, where should i move?
                     //console.log("Janitor: nothing to build or repair");
+                    creep.moveTo(creep.room.controller);
                 }
             }
         }
         else {
+
             //dont have energy, need top up
-            //TODO adjust energy source dynamically
             //depending on what available
 
-            var s_storage = creep.room.find(FIND_STRUCTURES, {
+            var stores = creep.room.find(FIND_STRUCTURES, {
                 filter: (structure) => {
-                    return ((structure.structureType == STRUCTURE_STORAGE) &&
+                    return ((structure.structureType == STRUCTURE_STORAGE
+                    || structure.structureType == STRUCTURE_CONTAINER) &&
                         structure.store[RESOURCE_ENERGY] > 0)
                 }
             });
-
-            var source = creep.pos.findClosestByPath(s_storage);
-
-            if (creep.withdraw(source, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
-                creep.moveTo(source, { visualizePathStyle: { stroke: '#ffaa00' } });
+            
+            var source = null;
+    
+            if (stores.length > 0) {
+                source = creep.pos.findClosestByPath(stores)
+                if (creep.withdraw(source, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
+                    creep.moveTo(source, { visualizePathStyle: { stroke: '#ffaa00' } });
+                }
+            } else {
+                source = creep.pos.findClosestByPath(creep.room.find(FIND_SOURCES));
+                if (creep.harvest(source, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
+                    creep.moveTo(source, { visualizePathStyle: { stroke: '#ffaa00' } });
+                }
             }
+
+
         }
     }
 };
@@ -96,6 +142,7 @@ module.exports = roleJanitor;
 
 const HEALTHY_STATES = {
     [STRUCTURE_CONTAINER]: 200000,
+    [STRUCTURE_WALL]: 200000,
     [STRUCTURE_RAMPART]: 5000000,
     [STRUCTURE_ROAD]: 5000
 }
@@ -103,10 +150,11 @@ const HEALTHY_STATES = {
 const REPAIR_COOLDOWN = {
     [STRUCTURE_CONTAINER]: 20000,
     [STRUCTURE_RAMPART]: 10000,
+    [STRUCTURE_WALL]: 10000,
     [STRUCTURE_ROAD]: 10000
 }
 
 /** @param {Creep} creep, @param {Structure} structure **/
 function getFixedTimeFor(creep, structure) {
-    return creep.memory.fixedTimes[structure.id]===undefined?0:creep.memory.fixedTimes[structure.id];
+    return creep.memory.fixedTimes[structure.id] === undefined ? 0 : creep.memory.fixedTimes[structure.id];
 }
