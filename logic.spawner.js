@@ -7,6 +7,9 @@
  * 
  */
 
+/**
+ * Refactor: consolidate MaximumBody generation for different rolea
+ */
 var logicSpawner = {
 
     /** @param {Room} room **/
@@ -17,8 +20,8 @@ var logicSpawner = {
         var toSpawnCost = 0;
         var spawnable = null;
 
-        var energyAvailable = room.energyAvailable;
 
+        var energyAvailable = room.energyAvailable;
 
         var miners = _.filter(Game.creeps, (creep) => creep.memory.role == 'miner' &&
             creep.room == room);
@@ -28,12 +31,30 @@ var logicSpawner = {
             creep.room == room);
         var linkers = _.filter(Game.creeps, (creep) => creep.memory.role == 'linker' &&
             creep.room == room);
-        var janitors = _.filter(Game.creeps, (creep) => creep.memory.role == 'janitor');
-        var upgraders = _.filter(Game.creeps, (creep) => creep.memory.role == 'upgrader');
+        var janitors = _.filter(Game.creeps, (creep) => creep.memory.role == 'janitor' &&
+            creep.room == room);
+        var upgraders = _.filter(Game.creeps, (creep) => creep.memory.role == 'upgrader' &&
+            creep.room == room);
+        var soldiers = _.filter(Game.creeps, (creep) => creep.memory.role == 'soldier' &&
+            creep.room == room);
 
-        var containers = room.find(FIND_STRUCTURES, {
+        var mining_containers = room.find(FIND_STRUCTURES, {
             filter: (structure) => {
-                return ((structure.structureType == STRUCTURE_CONTAINER))
+                return ((structure.structureType == STRUCTURE_CONTAINER) && (
+                    structure.pos.getRangeTo(structure.pos.findClosestByRange(FIND_SOURCES)) < 3
+                    || structure.pos.getRangeTo(structure.pos.findClosestByRange(FIND_MINERALS))))
+            }
+        });
+
+        var towers = room.find(FIND_STRUCTURES, {
+            filter: (structure) => {
+                return (structure.structureType == STRUCTURE_TOWER)
+            }
+        });
+
+        var storages = room.find(FIND_STRUCTURES, {
+            filter: (structure) => {
+                return ((structure.structureType == STRUCTURE_STORAGE))
             }
         });
 
@@ -43,29 +64,45 @@ var logicSpawner = {
             }
         });
 
+        var sites = room.find(FIND_CONSTRUCTION_SITES);
+        var hostiles = room.find(FIND_HOSTILE_CREEPS);
+
+        let available = 0; //energy available for single spawning
+
+        //Soldier
+
+        if (hostiles.length > 0) {
+
+            for (var i = soldiers.length; i < 3*hostiles.length; i++) {
+                available = energyAvailable - toSpawnCost;
+                spawnable = {
+                    name: 'Soudat' + Game.time + "-" + Math.round(Math.random() * (1000)),
+                    body: getMaximumBody([TOUGH, RANGED_ATTACK, ATTACK, MOVE], available),
+                    initMemory: {
+                        role: 'soldier',
+                        target: room.name, base: room.name
+                    }
+                };
+                toSpawnCost += calculateSpawningCost(spawnable.body);
+                spawnQueue.push(spawnable);
+            }
+        }
         //Hauler
         //if there is at least one container in the room we need a Hauler
         //to move energy around, try to spawn big hauler if possible
-        //Haule will be first in the queue so it will have priority of
+        //Hauler will be first in the queue so it will have priority of
         //others
-        if (containers.length > 0 && haulers.length == 0) {
-            let available = energyAvailable - toSpawnCost;
-            let haulerUnitCost = 2 * BODYPART_COST[CARRY] + 1 * BODYPART_COST[MOVE];
-            //let haulerUnits = (Math.floor(available/haulerUnitCost)>8)?8:Math.floor(available/haulerUnitCost);
-            let haulerUnits = Math.floor(available / haulerUnitCost);//TODO limit size?
-            let body = [];
 
-            for (var i = 0; i < haulerUnits; i++) {
-                body.push(CARRY);
-                body.push(CARRY);
-                body.push(MOVE);
-            }
+        if (mining_containers.length > 0 && haulers.length == 0) {
+
+            available = energyAvailable - toSpawnCost;
 
             spawnable = {
                 name: 'Haurry' + Game.time + "-" + Math.round(Math.random() * (1000)),
-                body: body,
+                body: getMaximumBody([CARRY, CARRY, MOVE], available),
                 initMemory: {
                     role: 'hauler',
+                    target: room.name, base: room.name,
                     transporting: false,
                     payload: RESOURCE_ENERGY,
                     assignment: 0
@@ -83,21 +120,23 @@ var logicSpawner = {
         //if there are conditions for Hauler to operate than 2 is enough (maybe 1 per energy resource)
         //if Hauler condition are not met (ie. no containers presents)
         //then spawn 2 additional Harvesters
-        //if there is Extractor present, spawn 1 more harvester to operate that
 
         //if we have conainers then we SHOULD have 
         //Hauler operating, so no need to Harvesters
 
 
-        if (containers.length == 0) {
-            //2 basic Harvesters should be operating 
-            //if there is no container operated by Hauler
-            for (var i = harvesters.length; i < 2; i++) {
+        if (storages.length == 0) {
 
+
+            //2 basic Harvesters should be operating 
+            //if there is no storeage operated by Hauler
+            for (var i = harvesters.length; i < 2; i++) {
+                available = energyAvailable - toSpawnCost;
                 spawnable = {
                     name: 'Harvey' + Game.time + "-" + Math.round(Math.random() * (1000)),
-                    body: [WORK, CARRY, MOVE],
-                    initMemory: { role: 'harvester', assignment: 0, resourceCarried: 0 }
+                    body: getMaximumBody([WORK, CARRY, MOVE], available),
+                    initMemory: { role: 'harvester', assignment: 0, resourceCarried: 0,
+                    target: room.name, base: room.name }
                 };
 
                 toSpawnCost += calculateSpawningCost(spawnable.body);
@@ -125,7 +164,7 @@ var logicSpawner = {
 
         //Miners
         //TODO adjust size depending on energy avaiable?
-        for (var i = miners.length; i < containers.length; i++) {
+        for (var i = miners.length; i < mining_containers.length; i++) {
             spawnable = {
                 name: 'Minero' + Game.time + "-" + Math.round(Math.random() * (1000)),
                 body: [WORK, WORK, WORK, WORK, WORK, MOVE],
@@ -136,25 +175,24 @@ var logicSpawner = {
             spawnQueue.push(spawnable);
         }
 
-        //Janitors
-        for (var i = janitors.length; i < 3; i++) {
+        //Janitors - adjust size dynamically
 
-            let available = energyAvailable - toSpawnCost;
-            let janitorUnitCost = 1 * BODYPART_COST[WORK] + 1 * BODYPART_COST[CARRY] + 1 * BODYPART_COST[MOVE];
-            let janitorUnits = (Math.floor(available / janitorUnitCost) > 3) ? 3 : Math.floor(available / janitorUnitCost);
+        let j_needed = 2;
 
-            let body = [];
+        if (towers.length > 0 && sites.length == 0) {
+            j_needed = 1; //one janitor to fix containers?
+        }
 
-            for (var j = 0; j < janitorUnits; j++) {
-                body.push(WORK);
-                body.push(CARRY);
-                body.push(MOVE);
-            }
+        for (var i = janitors.length; i < j_needed; i++) {
 
+            available = energyAvailable - toSpawnCost;
             spawnable = {
                 name: 'JayJay' + Game.time + "-" + Math.round(Math.random() * (1000)),
-                body: body,
-                initMemory: { role: 'janitor', fixedTimes: {} }
+                body: getMaximumBody([WORK, CARRY, MOVE], available),
+                initMemory: {
+                    role: 'janitor', fixedTimes: {},
+                    target: room.name, base: room.name
+                }
             };
             toSpawnCost += calculateSpawningCost(spawnable.body);
             spawnQueue.push(spawnable);
@@ -163,16 +201,15 @@ var logicSpawner = {
 
         //Upgraders
 
-        for (var i = upgraders.length; i < 2; i++) {
+        for (var i = upgraders.length; i < 1; i++) {
 
+            available = energyAvailable - toSpawnCost;
             spawnable = {
                 name: 'Upgrash' + Game.time + "-" + Math.round(Math.random() * (1000)),
-                body: [WORK, WORK, WORK, WORK, WORK,
-                    WORK, WORK, WORK, WORK, WORK, CARRY,
-                    CARRY, MOVE, MOVE],
-                initMemory: { role: 'upgrader' }
+                body: getMaximumBody([WORK, CARRY, MOVE], available),
+                initMemory: { role: 'upgrader',
+                target: room.name, base: room.name }
             };
-
             toSpawnCost += calculateSpawningCost(spawnable.body);
             spawnQueue.push(spawnable);
         }
@@ -185,4 +222,25 @@ module.exports = logicSpawner;
 
 function calculateSpawningCost(body) {
     return _.sum(body.map((b) => BODYPART_COST[b]));
+}
+
+function getMaximumBody(unit, energy) {
+
+    let maxBody = [];
+    let unitCost = 0;
+
+    for (const p of unit) {
+        unitCost += BODYPART_COST[p];
+    }
+
+    let unitsCount = (Math.floor(energy / unitCost) * unit.length > 50) ?
+        Math.floor(50 / unit.length) : Math.floor(energy / unitCost);
+
+    for (var i = 0; i < unitsCount; i++) {
+        for (const p of unit) {
+            maxBody.push(p);
+        }
+    }
+
+    return maxBody;
 } 
