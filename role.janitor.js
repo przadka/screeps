@@ -16,26 +16,8 @@ var roleJanitor = {
     /** @param {Creep} creep **/
     run: function (creep) {
 
-        //if full and i should be working in another room - exit
-        if ((creep.store.getFreeCapacity() == 0) &&
-            (creep.memory.target != undefined) && (creep.room.name != creep.memory.target)) {
-            //find exit to the target room
-
-            let exit = creep.room.findExitTo(creep.memory.target);
-            creep.moveTo(creep.pos.findClosestByRange(exit));
-            return; //refactor?
-        }
-
-        //if empty and my base is in a differnet room, go to base to fillu up
-        if ((creep.store[RESOURCE_ENERGY] == 0) &&
-            (creep.memory.base != undefined) && (creep.room.name != creep.memory.base)) {
-            //find exit to the base room
-
-            let exit = creep.room.findExitTo(creep.memory.base);
-            creep.moveTo(creep.pos.findClosestByRange(exit));
-            return; //refactor?
-        }
-
+        if (creep.changeRoomsIfNeeded())
+            return;
 
         //state transitions
         if (creep.memory.working && creep.store[RESOURCE_ENERGY] == 0) {
@@ -111,16 +93,19 @@ var roleJanitor = {
             //dont have energy, need top up
             //depending on what available
 
+            if (creep.pickDroppedEnergyIfAny())
+                return;
+
             var stores = creep.room.find(FIND_STRUCTURES, {
                 filter: (structure) => {
                     return ((structure.structureType == STRUCTURE_STORAGE
-                    || structure.structureType == STRUCTURE_CONTAINER) &&
+                        || structure.structureType == STRUCTURE_CONTAINER) &&
                         structure.store[RESOURCE_ENERGY] > 0)
                 }
             });
-            
+
             var source = null;
-    
+
             if (stores.length > 0) {
                 source = creep.pos.findClosestByPath(stores)
                 if (creep.withdraw(source, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {

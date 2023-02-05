@@ -22,6 +22,9 @@ var roleHauler = {
     /** @param {Creep} creep **/
     run: function (creep) {
 
+        if (creep.changeRoomsIfNeeded())
+            return;
+
         //state change code - decide whether 
         //the current state should be changed
         if (!creep.memory.transporting) { //collecting state
@@ -37,8 +40,8 @@ var roleHauler = {
 
             //if full or I emptied container - start transporting
             if (creep.store.getFreeCapacity(creep.memory.payload) == 0 ||
-                (creep.store.getUsedCapacity(creep.memory.payload) > 0 
-                && my_container.store.getUsedCapacity(creep.memory.payload) == 0)) {
+                (creep.store.getUsedCapacity(creep.memory.payload) > 0
+                    && my_container.store.getUsedCapacity(creep.memory.payload) == 0)) {
                 creep.say('⚡transport');
                 creep.memory.assignment = 0;
                 creep.memory.transporting = true;
@@ -51,7 +54,7 @@ var roleHauler = {
                 creep.memory.transporting = false;
 
                 let shippableMinerals = this.getShippableMinerals(creep.room);
-      
+
 
                 if (_.size(shippableMinerals) > 0 && this.isRoomHealthy(creep.room)) {
                     //i can collect some mineral
@@ -68,7 +71,7 @@ var roleHauler = {
                     //so i dont need to find it laters with find Containers
 
                 } else {
-                    creep.memory.payload = RESOURCE_ENERGY;    
+                    creep.memory.payload = RESOURCE_ENERGY;
                 }
 
                 creep.memory.assignment = this.findFullestContainer(creep.room, creep.memory.payload).id;
@@ -96,7 +99,15 @@ var roleHauler = {
             }
 
             if (my_target === null) {
-                console.log("WARNING: Hauler has payload but there is no destination in the room " + creep.room.name);
+
+                //if i dont have any good targets thet i will
+                //just try to drop the energy close to controller
+                if (creep.pos.getRangeTo(creep.room.controller) < 3) {
+                    creep.drop(RESOURCE_ENERGY);
+                } else {
+                    creep.moveTo(creep.room.controller);
+                }
+
             } else {
                 if (creep.transfer(my_target, creep.memory.payload) == ERR_NOT_IN_RANGE) {
                     creep.moveTo(my_target, { visualizePathStyle: { stroke: '#ffffff' } });
@@ -104,10 +115,7 @@ var roleHauler = {
             }
         } else {
             //collecting payload from assigned container
-
             var my_container = Game.getObjectById(creep.memory.assignment);
-            //TODO see if there is any energy that was dropped
-            // var dropeed = creep.room.find(FIND_DROPPED_RESOURCES, RESOURCE_ENERGY);
 
             if (creep.withdraw(my_container, creep.memory.payload) == ERR_NOT_IN_RANGE) {
                 creep.moveTo(my_container, { visualizePathStyle: { stroke: '#ffaa00' } });
@@ -142,7 +150,7 @@ var roleHauler = {
      */
 
     isRoomHealthy: function (room) {
-        return (room.energyAvailable/room.energyCapacityAvailable>0.9);
+        return (room.energyAvailable / room.energyCapacityAvailable > 0.9);
     },
 
 
@@ -188,12 +196,12 @@ var roleHauler = {
                     return (structure.structureType == STRUCTURE_EXTENSION
                         || structure.structureType == STRUCTURE_SPAWN
                         || structure.structureType == STRUCTURE_STORAGE
-                        || structure.structureType == STRUCTURE_TOWER
-                        && (structure.store.getUsedCapacity(RESOURCE_ENERGY) / structure.store.getCapacity(RESOURCE_ENERGY) < 0.6)//towers with energy below 60%
+                        || (structure.structureType == STRUCTURE_TOWER)//towers with energy below 60%
                     ) &&
                         structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0;
                 }
             });
+
             //sort by capacity, trying to fill 
             //in smaller targets first
 

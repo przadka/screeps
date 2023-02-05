@@ -11,6 +11,10 @@ var roleMiner = {
 
     /** @param {Creep} creep **/
     run: function (creep) {
+
+        if (creep.changeRoomsIfNeeded())
+            return;
+
         var miners = _.filter(Game.creeps, (creep) => creep.memory.role == 'miner');
 
         if (creep.memory.assignment == 0) {
